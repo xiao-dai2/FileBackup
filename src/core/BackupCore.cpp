@@ -9,7 +9,7 @@ namespace fs = std::filesystem;
 void BackupCore::traverseDir(const fs::path& srcDir, vector<fs::path>& fileList, const FilterRule& rule) {
     if (!fs::exists(srcDir) || !fs::is_directory(srcDir)) return;
 
-    for (const auto& entry : fs::recursive_directory_iterator(srcDir)) {
+    for (const auto& entry : fs::directory_iterator(srcDir)) {
         // 应用筛选规则（路径、类型、大小、时间等）
         if (rule.match(entry.path())) {
             fileList.push_back(entry.path());
