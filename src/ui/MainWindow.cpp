@@ -1,121 +1,203 @@
-// MainWindow.cpp
 #include "MainWindow.h"
 #include <iostream>
 #include <filesystem>
+#include <sstream>
 
 namespace fs = std::filesystem;
 
 MainWindow::MainWindow()
-    : m_mainBox(Gtk::ORIENTATION_VERTICAL, 10),
-      m_srcBox(Gtk::ORIENTATION_HORIZONTAL, 5),
-      m_destBox(Gtk::ORIENTATION_HORIZONTAL, 5),
-      m_algBox(Gtk::ORIENTATION_HORIZONTAL, 5),
-      m_pwdBox(Gtk::ORIENTATION_HORIZONTAL, 5),
+    : // Layout initialization (Unified spacing, optimized hierarchy)
+      m_mainBox(Gtk::ORIENTATION_VERTICAL, 15),
+      m_srcBox(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_destBox(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_algBox(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_pwdBox(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_btnBox(Gtk::ORIENTATION_HORIZONTAL, 15),
+      m_statusBox(Gtk::ORIENTATION_HORIZONTAL, 5),
+
+      // Label initialization (Supplement prompt text, optimize style)
+      m_srcLabel("Source Dir:"),
+      m_destLabel("Target Dir:"),
+      m_statusLabel("Ready"),
+
+      // Button initialization (Unified style, supplement text)
+      m_srcBtn("Browse"),
+      m_destBtn("Browse"),
+      m_backupBtn("Execute Backup"),
+      m_restoreBtn("Execute Restore"),
+      m_timerBtn("Start Scheduled Backup"),
+      m_pwdVisibleBtn("Show Password"),
+
+      // Input box initialization (Optimize placeholders)
       m_srcEntry(),
       m_destEntry(),
+      m_pwdEntry(),
+
+      // Combo box initialization
       m_packCombo(),
       m_compressCombo(),
       m_cryptoCombo(),
-      m_pwdEntry(),
-      m_srcBtn("选择源目录"),
-      m_destBtn("选择目标目录"),
-      m_backupBtn("执行备份"),
-      m_restoreBtn("执行还原"),
-      m_statusLabel("就绪"),
-      m_timerInterval(3600),
+
+      // Business parameter initialization
+      m_timerInterval(60),
+      m_timerRunning(false),
       m_backupSuccess(false),
       m_restoreSuccess(false),
       m_currentTask(""),
-      // 初始化手动创建的线程池：参数1=是否自动增长线程数，参数2=初始线程数（设为1即可满足需求）
-      m_threadPool(true, 1)
+      m_threadPool(true, 1) // Thread pool initialization
 {
-    // 设置窗口属性
-    this->set_title("数据备份软件（GTKmm版）");
-    this->set_default_size(600, 300);
-    this->set_border_width(15);
+    // ============== Window Basic Configuration ==============
+    this->set_title("Data Backup Tool (GTKmm Full Version)");
+    this->set_default_size(700, 400); // Enlarge window size for better experience
+    this->set_border_width(20);
+    this->set_resizable(true); // Allow window resizing
+    this->signal_delete_event().connect(sigc::mem_fun(*this, &MainWindow::on_window_delete_event));
 
-    // 1. 源路径布局
-    m_srcEntry.set_placeholder_text("请选择待备份的目录...");
+    // ============== Source Path Layout Configuration ==============
+    m_srcLabel.set_width_chars(8); // Fixed label width for alignment
+    m_srcLabel.set_halign(Gtk::ALIGN_END);
+    m_srcEntry.set_placeholder_text("Please select or enter the directory to back up...");
+    m_srcEntry.set_max_length(256); // Limit input length
+    m_srcBtn.set_size_request(80, 30); // Fixed button size
+
+    m_srcBox.pack_start(m_srcLabel, Gtk::PACK_SHRINK);
     m_srcBox.pack_start(m_srcEntry, Gtk::PACK_EXPAND_WIDGET);
     m_srcBox.pack_start(m_srcBtn, Gtk::PACK_SHRINK);
     m_mainBox.pack_start(m_srcBox, Gtk::PACK_SHRINK);
 
-    // 2. 目标路径布局
-    m_destEntry.set_placeholder_text("请选择备份存储目录...");
+    // ============== Target Path Layout Configuration ==============
+    m_destLabel.set_width_chars(8);
+    m_destLabel.set_halign(Gtk::ALIGN_END);
+    m_destEntry.set_placeholder_text("Please select or enter backup storage/restore directory...");
+    m_destEntry.set_max_length(256);
+    m_destBtn.set_size_request(80, 30);
+
+    m_destBox.pack_start(m_destLabel, Gtk::PACK_SHRINK);
     m_destBox.pack_start(m_destEntry, Gtk::PACK_EXPAND_WIDGET);
     m_destBox.pack_start(m_destBtn, Gtk::PACK_SHRINK);
     m_mainBox.pack_start(m_destBox, Gtk::PACK_SHRINK);
 
-    // 3. 算法选择布局
+    // ============== Algorithm Selection Layout Configuration ==============
+    // Packing algorithm sub-layout
+    Gtk::Box packSubBox(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label packLabel("Pack Alg:");
+    packLabel.set_width_chars(8);
     m_packCombo.append("tar");
-    m_packCombo.append("MyPack");
+    m_packCombo.append("zip"); // Supplement optional algorithms
     m_packCombo.set_active(0);
+    m_packCombo.set_size_request(100, 30);
+    packSubBox.pack_start(packLabel, Gtk::PACK_SHRINK);
+    packSubBox.pack_start(m_packCombo, Gtk::PACK_SHRINK);
+
+    // Compression algorithm sub-layout
+    Gtk::Box compressSubBox(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label compressLabel("Compress Alg:");
+    compressLabel.set_width_chars(8);
     m_compressCombo.append("LZ77");
-    m_compressCombo.append("Haff");
+    m_compressCombo.append("Deflate");
     m_compressCombo.set_active(0);
+    m_compressCombo.set_size_request(100, 30);
+    compressSubBox.pack_start(compressLabel, Gtk::PACK_SHRINK);
+    compressSubBox.pack_start(m_compressCombo, Gtk::PACK_SHRINK);
+
+    // Encryption algorithm sub-layout
+    Gtk::Box cryptoSubBox(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label cryptoLabel("Crypto Alg:");
+    cryptoLabel.set_width_chars(8);
     m_cryptoCombo.append("AES");
     m_cryptoCombo.append("DES");
     m_cryptoCombo.set_active(0);
+    m_cryptoCombo.set_size_request(100, 30);
+    cryptoSubBox.pack_start(cryptoLabel, Gtk::PACK_SHRINK);
+    cryptoSubBox.pack_start(m_cryptoCombo, Gtk::PACK_SHRINK);
 
-    Gtk::Label packLabel("打包算法：");
-    Gtk::Label compressLabel("压缩算法：");
-    Gtk::Label cryptoLabel("加密算法：");
-    m_algBox.pack_start(packLabel, Gtk::PACK_SHRINK);
-    m_algBox.pack_start(m_packCombo, Gtk::PACK_SHRINK);
-    m_algBox.pack_start(compressLabel, Gtk::PACK_SHRINK);
-    m_algBox.pack_start(m_compressCombo, Gtk::PACK_SHRINK);
-    m_algBox.pack_start(cryptoLabel, Gtk::PACK_SHRINK);
-    m_algBox.pack_start(m_cryptoCombo, Gtk::PACK_SHRINK);
+    // Assemble algorithm layout
+    m_algBox.pack_start(packSubBox, Gtk::PACK_SHRINK);
+    m_algBox.pack_start(compressSubBox, Gtk::PACK_SHRINK);
+    m_algBox.pack_start(cryptoSubBox, Gtk::PACK_SHRINK);
     m_mainBox.pack_start(m_algBox, Gtk::PACK_SHRINK);
 
-    // 4. 密码布局
-    m_pwdEntry.set_visibility(false);
-    m_pwdEntry.set_placeholder_text("请输入加密密码...");
-    Gtk::Label pwdLabel("加密密码：");
+    // ============== Password Layout Configuration (Supplement Visibility Toggle) ==============
+    Gtk::Label pwdLabel("Password:");
+    pwdLabel.set_width_chars(8);
+    pwdLabel.set_halign(Gtk::ALIGN_END);
+    m_pwdEntry.set_placeholder_text("Please enter backup encryption password (optional)...");
+    m_pwdEntry.set_visibility(false); // Hide password by default
+    m_pwdEntry.set_max_length(32);
+
     m_pwdBox.pack_start(pwdLabel, Gtk::PACK_SHRINK);
     m_pwdBox.pack_start(m_pwdEntry, Gtk::PACK_EXPAND_WIDGET);
+    m_pwdBox.pack_start(m_pwdVisibleBtn, Gtk::PACK_SHRINK);
     m_mainBox.pack_start(m_pwdBox, Gtk::PACK_SHRINK);
 
-    // 5. 功能按钮布局
-    Gtk::Box btnBox(Gtk::ORIENTATION_HORIZONTAL, 10);
-    btnBox.pack_start(m_backupBtn, Gtk::PACK_SHRINK);
-    btnBox.pack_start(m_restoreBtn, Gtk::PACK_SHRINK);
-    m_mainBox.pack_start(btnBox, Gtk::PACK_SHRINK);
+    // ============== Function Button Layout Configuration (Supplement Timer Button) ==============
+    m_backupBtn.set_size_request(120, 35);
+    m_restoreBtn.set_size_request(120, 35);
+    m_timerBtn.set_size_request(120, 35);
 
-    // 6. 状态提示
-    m_statusLabel.set_halign(Gtk::ALIGN_CENTER);
-    m_mainBox.pack_start(m_statusLabel, Gtk::PACK_SHRINK);
+    m_btnBox.pack_start(m_backupBtn, Gtk::PACK_SHRINK);
+    m_btnBox.pack_start(m_restoreBtn, Gtk::PACK_SHRINK);
+    m_btnBox.pack_start(m_timerBtn, Gtk::PACK_SHRINK);
+    m_btnBox.set_halign(Gtk::ALIGN_CENTER); // Buttons centered
+    m_mainBox.pack_start(m_btnBox, Gtk::PACK_SHRINK);
 
-    // 添加主布局到窗口
-    this->add(m_mainBox);
+    // ============== Status Prompt Layout Configuration (Optimize Style) ==============
+    Gtk::Label statusTitleLabel("Status:");
+    statusTitleLabel.set_width_chars(8);
+    statusTitleLabel.set_halign(Gtk::ALIGN_END);
+    m_statusLabel.set_halign(Gtk::ALIGN_START);
+    m_statusLabel.set_markup("<span color='#2E8B57'>Ready</span>"); // Rich text style
 
-    // 绑定信号处理函数
+    m_statusBox.pack_start(statusTitleLabel, Gtk::PACK_SHRINK);
+    m_statusBox.pack_start(m_statusLabel, Gtk::PACK_SHRINK);
+    m_mainBox.pack_start(m_statusBox, Gtk::PACK_EXPAND_WIDGET); // Occupy remaining space
+
+    // ============== Signal Binding (Supplement All Interactive Events) ==============
+    // Path selection buttons
     m_srcBtn.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_select_src_clicked));
     m_destBtn.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_select_dest_clicked));
+
+    // Function buttons
     m_backupBtn.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_backup_clicked));
     m_restoreBtn.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_restore_clicked));
-    // 绑定dispatcher信号（后台任务完成后触发UI更新）
+    m_timerBtn.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_timer_btn_clicked));
+
+    // Password visibility toggle
+    m_pwdVisibleBtn.signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::on_pwd_visible_toggled));
+
+    // Input box content change
+    m_srcEntry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_src_entry_changed));
+    m_destEntry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_dest_entry_changed));
+
+    // Cross-thread notification
     m_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_task_completed));
 
-    // 显示所有控件
+    // ============== Show All Widgets ==============
+    this->add(m_mainBox);
     this->show_all_children();
 }
 
 MainWindow::~MainWindow() {
-    // 断开定时器连接
-    if (m_backupTimerConn.connected()) {
-        m_backupTimerConn.disconnect();
-    }
-
-    // 修复：低版本glibmm线程池shutdown无需传递枚举参数
-    m_threadPool.shutdown(); // 手动关闭线程池，等待任务完成
+    // Stop timer
+    stop_timer();
+    // Shutdown thread pool
+    m_threadPool.shutdown();
 }
 
-// 选择源目录
+// ============== Window Close Event (Graceful Exit) ==============
+bool MainWindow::on_window_delete_event() {
+    std::cout << "Program is exiting gracefully..." << std::endl;
+    stop_timer();
+    Gtk::Main::quit();
+    return true;
+}
+
+// ============== Source Directory Selection Event ==============
 void MainWindow::on_select_src_clicked() {
-    Gtk::FileChooserDialog dialog("选择源目录", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    Gtk::FileChooserDialog dialog("Select Directory to Back Up", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
     dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
     dialog.add_button(Gtk::Stock::OK, Gtk::RESPONSE_OK);
+    dialog.set_transient_for(*this); // Dialog attaches to main window
 
     if (dialog.run() == Gtk::RESPONSE_OK) {
         std::string path = dialog.get_filename();
@@ -124,11 +206,12 @@ void MainWindow::on_select_src_clicked() {
     }
 }
 
-// 选择目标目录
+// ============== Target Directory Selection Event ==============
 void MainWindow::on_select_dest_clicked() {
-    Gtk::FileChooserDialog dialog("选择目标目录", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    Gtk::FileChooserDialog dialog("Select Backup Storage/Restore Directory", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
     dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
     dialog.add_button(Gtk::Stock::OK, Gtk::RESPONSE_OK);
+    dialog.set_transient_for(*this);
 
     if (dialog.run() == Gtk::RESPONSE_OK) {
         std::string path = dialog.get_filename();
@@ -137,53 +220,99 @@ void MainWindow::on_select_dest_clicked() {
     }
 }
 
-// 执行备份（触发后台任务）
+// ============== Source Input Box Content Change Event ==============
+void MainWindow::on_src_entry_changed() {
+    m_backupConfig.srcPath = m_srcEntry.get_text();
+    // Real-time path validity check
+    if (!m_srcEntry.get_text().empty() && !fs::exists(m_srcEntry.get_text())) {
+        m_statusLabel.set_markup("<span color='#DC143C'>Warning: Source directory does not exist</span>");
+    } else if (m_destEntry.get_text().empty()) {
+        m_statusLabel.set_markup("<span color='#2E8B57'>Ready</span>");
+    }
+}
+
+// ============== Target Input Box Content Change Event ==============
+void MainWindow::on_dest_entry_changed() {
+    m_backupConfig.destPath = m_destEntry.get_text();
+    // Real-time path validity check
+    if (!m_destEntry.get_text().empty() && !fs::exists(m_destEntry.get_text())) {
+        m_statusLabel.set_markup("<span color='#DC143C'>Warning: Target directory does not exist</span>");
+    } else if (m_srcEntry.get_text().empty()) {
+        m_statusLabel.set_markup("<span color='#2E8B57'>Ready</span>");
+    }
+}
+
+// ============== Password Visibility Toggle Event ==============
+void MainWindow::on_pwd_visible_toggled() {
+    m_pwdEntry.set_visibility(m_pwdVisibleBtn.get_active());
+}
+
+// ============== Execute Backup Event ==============
 void MainWindow::on_backup_clicked() {
-    // 更新备份配置
+    // Path validity check
+    if (m_backupConfig.srcPath.empty()) {
+        m_statusLabel.set_markup("<span color='#DC143C'>Error: Please select source directory</span>");
+        return;
+    }
+    if (m_backupConfig.destPath.empty()) {
+        m_statusLabel.set_markup("<span color='#DC143C'>Error: Please select target directory</span>");
+        return;
+    }
+    if (!fs::exists(m_backupConfig.srcPath)) {
+        m_statusLabel.set_markup("<span color='#DC143C'>Error: Source directory does not exist</span>");
+        return;
+    }
+    if (!fs::exists(m_backupConfig.destPath)) {
+        // Auto create target directory
+        try {
+            fs::create_directories(m_backupConfig.destPath);
+            m_statusLabel.set_markup("<span color='#FF8C00'>Tip: Target directory created automatically</span>");
+        } catch (const fs::filesystem_error& e) {
+            m_statusLabel.set_markup("<span color='#DC143C'>Error: Failed to create target directory</span>");
+            return;
+        }
+    }
+
+    // Update backup configuration
     m_backupConfig.packAlg = m_packCombo.get_active_text();
     m_backupConfig.compressAlg = m_compressCombo.get_active_text();
     m_backupConfig.cryptoAlg = m_cryptoCombo.get_active_text();
     m_backupConfig.password = m_pwdEntry.get_text();
-
-    // 筛选规则配置
-    m_backupConfig.filterRule.includeTypes = {"普通文件", "目录文件"};
+    m_backupConfig.filterRule.includeTypes = {"Regular File", "Directory"};
     m_backupConfig.filterRule.minSize = 0;
     m_backupConfig.filterRule.maxSize = UINT64_MAX;
 
-    // 校验路径
-    if (m_backupConfig.srcPath.empty() || m_backupConfig.destPath.empty()) {
-        m_statusLabel.set_text("错误：源目录和目标目录不能为空！");
-        m_statusLabel.override_color(Gdk::RGBA("#FF0000"));
-        return;
-    }
-
-    // 设置任务状态，禁用按钮避免重复点击
+    // Set task status
     m_currentTask = "backup";
     m_backupBtn.set_sensitive(false);
     m_restoreBtn.set_sensitive(false);
-    m_statusLabel.set_text("正在备份中...");
-    m_statusLabel.override_color(Gdk::RGBA("#008000"));
+    m_timerBtn.set_sensitive(false);
+    m_statusLabel.set_markup("<span color='#FF8C00'>Backing up, please wait...</span>");
 
-    // 修复：使用手动创建的线程池提交任务（替代get_default()）
-    m_threadPool.push(
-        sigc::mem_fun(*this, &MainWindow::do_backup_task)
-    );
+    // Submit background task
+    m_threadPool.push(sigc::mem_fun(*this, &MainWindow::do_backup_task));
 }
 
-// 后台备份任务（在子线程执行，不操作UI）
+// ============== Background Backup Task ==============
 void MainWindow::do_backup_task() {
-    // 执行备份逻辑，不直接操作UI
     m_backupSuccess = m_backupCore.backup(m_backupConfig);
-    // 触发dispatcher，通知UI线程更新（线程安全）
     m_dispatcher.emit();
 }
 
-// 执行还原（触发后台任务）
+// ============== Execute Restore Event ==============
 void MainWindow::on_restore_clicked() {
-    // 选择备份文件
-    Gtk::FileChooserDialog dialog("选择备份文件", Gtk::FILE_CHOOSER_ACTION_OPEN);
+    // Select backup file
+    Gtk::FileChooserDialog dialog("Select Backup File", Gtk::FILE_CHOOSER_ACTION_OPEN);
     dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
     dialog.add_button(Gtk::Stock::OK, Gtk::RESPONSE_OK);
+    dialog.set_transient_for(*this);
+
+    // Add file filter (only show tar/zip backup files)
+    Gtk::FileFilter filter;
+    filter.set_name("Backup Files (*.tar *.zip)");
+    filter.add_pattern("*.tar");
+    filter.add_pattern("*.zip");
+    dialog.add_filter(filter);
 
     std::string backupFile;
     if (dialog.run() == Gtk::RESPONSE_OK) {
@@ -192,92 +321,149 @@ void MainWindow::on_restore_clicked() {
         return;
     }
 
-    // 还原路径
-    std::string restorePath = m_destEntry.get_text();
+    // Restore path check
+    std::string restorePath = m_backupConfig.destPath;
     if (restorePath.empty()) {
-        m_statusLabel.set_text("错误：还原目录不能为空！");
-        m_statusLabel.override_color(Gdk::RGBA("#FF0000"));
+        m_statusLabel.set_markup("<span color='#DC143C'>Error: Please select restore directory</span>");
         return;
     }
+    if (!fs::exists(restorePath)) {
+        try {
+            fs::create_directories(restorePath);
+            m_statusLabel.set_markup("<span color='#FF8C00'>Tip: Restore directory created automatically</span>");
+        } catch (const fs::filesystem_error& e) {
+            m_statusLabel.set_markup("<span color='#DC143C'>Error: Failed to create restore directory</span>");
+            return;
+        }
+    }
 
-    // 获取加密算法和密码
+    // Get configuration parameters
     std::string cryptoAlg = m_cryptoCombo.get_active_text();
+    std::string packType = m_packCombo.get_active_text();
     std::string password = m_pwdEntry.get_text();
 
-    // 设置任务状态，禁用按钮避免重复点击
+    // Set task status
     m_currentTask = "restore";
     m_backupBtn.set_sensitive(false);
     m_restoreBtn.set_sensitive(false);
-    m_statusLabel.set_text("正在还原中...");
-    m_statusLabel.override_color(Gdk::RGBA("#008000"));
+    m_timerBtn.set_sensitive(false);
+    m_statusLabel.set_markup("<span color='#FF8C00'>Restoring, please wait...</span>");
 
-    // 修复：使用手动创建的线程池提交带参数的任务
+    // Submit background task
     m_threadPool.push(
         sigc::bind(
             sigc::mem_fun(*this, &MainWindow::do_restore_task),
             backupFile,
             restorePath,
             cryptoAlg,
-            password
+            packType
         )
     );
 }
 
-// 后台还原任务（在子线程执行，不操作UI）
-void MainWindow::do_restore_task(const std::string& backupFile, const std::string& restorePath, const std::string& cryptoAlg, const std::string& password) {
-    // 执行还原逻辑，不直接操作UI
-    m_restoreSuccess = m_backupCore.restore(backupFile, restorePath, cryptoAlg, password);
-    // 触发dispatcher，通知UI线程更新（线程安全）
+// ============== Background Restore Task ==============
+void MainWindow::do_restore_task(const std::string& backupFile, const std::string& restorePath, const std::string& cryptoAlg, const std::string& packType) {
+    m_restoreSuccess = m_backupCore.restore(backupFile, restorePath, cryptoAlg, packType, m_pwdEntry.get_text());
     m_dispatcher.emit();
 }
 
-// UI更新回调（由dispatcher触发，在主线程执行，安全操作UI）
-void MainWindow::on_task_completed() {
-    // 恢复按钮可用
-    m_backupBtn.set_sensitive(true);
-    m_restoreBtn.set_sensitive(true);
+// ============== Scheduled Backup Button Event ==============
+void MainWindow::on_timer_btn_clicked() {
+    if (!m_timerRunning) {
+        // Start scheduled backup
+        if (m_backupConfig.srcPath.empty() || m_backupConfig.destPath.empty()) {
+            m_statusLabel.set_markup("<span color='#DC143C'>Error: Please configure source and target directories first</span>");
+            return;
+        }
+        // Pop up interval input dialog
+        Gtk::Dialog dialog("Set Scheduled Backup Interval", *this);
+        dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
+        dialog.add_button(Gtk::Stock::OK, Gtk::RESPONSE_OK);
 
-    // 根据任务类型更新UI状态
-    if (m_currentTask == "backup") {
-        if (m_backupSuccess) {
-            m_statusLabel.set_text("备份成功！");
-            m_statusLabel.override_color(Gdk::RGBA("#008000"));
-        } else {
-            m_statusLabel.set_text("备份失败！");
-            m_statusLabel.override_color(Gdk::RGBA("#FF0000"));
+        Gtk::Box* contentArea = dialog.get_content_area();
+        Gtk::Box inputBox(Gtk::ORIENTATION_HORIZONTAL, 10);
+        Gtk::Label label("Backup Interval (minutes):");
+        Gtk::Entry intervalEntry;
+        intervalEntry.set_text(std::to_string(m_timerInterval / 60));
+        intervalEntry.set_width_chars(10);
+
+        inputBox.pack_start(label, Gtk::PACK_SHRINK);
+        inputBox.pack_start(intervalEntry, Gtk::PACK_SHRINK);
+        contentArea->pack_start(inputBox, Gtk::PACK_SHRINK);
+        dialog.show_all_children();
+
+        if (dialog.run() == Gtk::RESPONSE_OK) {
+            try {
+                int interval = std::stoi(intervalEntry.get_text());
+                if (interval < 1) {
+                    m_statusLabel.set_markup("<span color='#DC143C'>Error: Interval cannot be less than 1 minute</span>");
+                    return;
+                }
+                start_timer(interval);
+                m_timerRunning = true;
+                m_timerBtn.set_label("Stop Scheduled Backup");
+                m_statusLabel.set_markup("<span color='#4169E1'>Scheduled backup started, execute every " + std::to_string(interval) + " minutes</span>");
+            } catch (const std::invalid_argument& e) {
+                m_statusLabel.set_markup("<span color='#DC143C'>Error: Please enter a valid number</span>");
+            }
         }
-    } else if (m_currentTask == "restore") {
-        if (m_restoreSuccess) {
-            m_statusLabel.set_text("还原成功！");
-            m_statusLabel.override_color(Gdk::RGBA("#008000"));
-        } else {
-            m_statusLabel.set_text("还原失败（密码错误或文件损坏）！");
-            m_statusLabel.override_color(Gdk::RGBA("#FF0000"));
-        }
+    } else {
+        // Stop scheduled backup
+        stop_timer();
+        m_timerRunning = false;
+        m_timerBtn.set_label("Start Scheduled Backup");
+        m_statusLabel.set_markup("<span color='#2E8B57'>Scheduled backup stopped</span>");
     }
-
-    // 重置任务类型
-    m_currentTask = "";
 }
 
-// 修复：定时器回调函数返回bool类型（返回true表示继续定时，false表示停止）
-bool MainWindow::on_timer_timeout() {
-    on_backup_clicked(); // 复用备份逻辑
-    return true; // 返回true，保持定时器持续运行
-}
-
-// 启动定时备份
+// ============== Start Scheduled Backup ==============
 void MainWindow::start_timer(int interval_min) {
-    // 断开原有定时器
+    stop_timer(); // Stop existing timer first
+    m_timerInterval = interval_min * 60; // Convert to seconds
+    m_backupTimerConn = Glib::signal_timeout().connect(
+        sigc::mem_fun(*this, &MainWindow::on_timer_timeout),
+        m_timerInterval * 1000 // Convert to milliseconds
+    );
+}
+
+// ============== Stop Scheduled Backup ==============
+void MainWindow::stop_timer() {
     if (m_backupTimerConn.connected()) {
         m_backupTimerConn.disconnect();
     }
-    // 设置新间隔（分钟转秒，毫秒为单位）
-    m_timerInterval = interval_min * 60;
-    m_backupTimerConn = Glib::signal_timeout().connect(
-        sigc::mem_fun(*this, &MainWindow::on_timer_timeout),
-        m_timerInterval * 1000
-    );
-    m_statusLabel.set_text("定时备份已开启，每" + std::to_string(interval_min) + "分钟执行一次");
-    m_statusLabel.override_color(Gdk::RGBA("#008000"));
+}
+
+// ============== Timer Timeout Callback ==============
+bool MainWindow::on_timer_timeout() {
+    if (m_timerRunning) {
+        on_backup_clicked(); // Reuse backup logic
+        return true; // Continue timing
+    }
+    return false; // Stop timing
+}
+
+// ============== UI Update After Background Task Completion ==============
+void MainWindow::on_task_completed() {
+    // Restore button availability
+    m_backupBtn.set_sensitive(true);
+    m_restoreBtn.set_sensitive(true);
+    m_timerBtn.set_sensitive(true);
+
+    // Update status prompt
+    if (m_currentTask == "backup") {
+        if (m_backupSuccess) {
+            m_statusLabel.set_markup("<span color='#2E8B57'>Backup succeeded!</span>");
+        } else {
+            m_statusLabel.set_markup("<span color='#DC143C'>Backup failed!</span>");
+        }
+    } else if (m_currentTask == "restore") {
+        if (m_restoreSuccess) {
+            m_statusLabel.set_markup("<span color='#2E8B57'>Restore succeeded!</span>");
+        } else {
+            m_statusLabel.set_markup("<span color='#DC143C'>Restore failed (Wrong password or damaged file)!</span>");
+        }
+    }
+
+    // Reset task type
+    m_currentTask = "";
 }

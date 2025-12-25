@@ -3,7 +3,7 @@
 #include <gtkmm.h>
 #include <glibmm/thread.h>
 #include <glibmm/dispatcher.h>
-#include <glibmm/threadpool.h> // 线程池头文件
+#include <glibmm/threadpool.h>
 #include "core/BackupCore.h"
 
 class MainWindow : public Gtk::Window {
@@ -11,52 +11,63 @@ public:
     MainWindow();
     ~MainWindow() override;
 
-    // 公共接口获取备份核心实例
-    BackupCore& getBackupCore() { return m_backupCore; }
-
 private:
-    // 布局类成员
-    Gtk::Box m_mainBox;
-    Gtk::Box m_srcBox, m_destBox;
-    Gtk::Box m_algBox;
-    Gtk::Box m_pwdBox;
-    // 输入框/下拉框
-    Gtk::Entry m_srcEntry, m_destEntry;
-    Gtk::ComboBoxText m_packCombo;
-    Gtk::ComboBoxText m_compressCombo;
-    Gtk::ComboBoxText m_cryptoCombo;
-    Gtk::Entry m_pwdEntry;
-    // 按钮/标签
-    Gtk::Button m_srcBtn, m_destBtn;
-    Gtk::Button m_backupBtn, m_restoreBtn;
-    Gtk::Label m_statusLabel;
+    // ------------- Layout Members (Improved Hierarchy) -------------
+    Gtk::Box m_mainBox;                  // Main layout (Vertical)
+    Gtk::Box m_srcBox, m_destBox;        // Source/Target path layout (Horizontal)
+    Gtk::Box m_algBox;                   // Algorithm selection layout (Horizontal)
+    Gtk::Box m_pwdBox;                   // Password layout (Horizontal)
+    Gtk::Box m_btnBox;                   // Function button layout (Horizontal, Independent)
+    Gtk::Box m_statusBox;                // Status prompt layout (Horizontal, New)
 
-    // 核心业务类
+    // ------------- Input/Select Widgets (Supplement Missing) -------------
+    Gtk::Entry m_srcEntry, m_destEntry;  // Path input boxes
+    Gtk::ComboBoxText m_packCombo;       // Packing algorithm combo box
+    Gtk::ComboBoxText m_compressCombo;   // Compression algorithm combo box
+    Gtk::ComboBoxText m_cryptoCombo;     // Encryption algorithm combo box
+    Gtk::Entry m_pwdEntry;               // Password input box
+    Gtk::CheckButton m_pwdVisibleBtn;    // Password visibility toggle (New)
+
+    // ------------- Button Widgets (Improve Naming & Function) -------------
+    Gtk::Button m_srcBtn;                // Select source directory button
+    Gtk::Button m_destBtn;               // Select target directory button
+    Gtk::Button m_backupBtn;             // Execute backup button
+    Gtk::Button m_restoreBtn;            // Execute restore button
+    Gtk::Button m_timerBtn;              // Start/Stop scheduled backup button (New)
+
+    // ------------- Label Widgets (Optimize Prompt) -------------
+    Gtk::Label m_srcLabel;               // Source path label (New)
+    Gtk::Label m_destLabel;              // Target path label (New)
+    Gtk::Label m_statusLabel;            // Status prompt label
+
+    // ------------- Core Business & Thread Related -------------
     BackupCore m_backupCore;
     BackupCore::BackupConfig m_backupConfig;
-
-    // 定时器
     sigc::connection m_backupTimerConn;
-    int m_timerInterval;
+    int m_timerInterval;                 // Scheduled backup interval (minutes)
+    bool m_timerRunning;                 // Whether scheduled backup is running (New)
 
-    // 跨线程通知与后台任务状态
-    Glib::Dispatcher m_dispatcher;
+    Glib::Dispatcher m_dispatcher;       // Cross-thread notification
     bool m_backupSuccess;
     bool m_restoreSuccess;
     std::string m_currentTask;
+    Glib::ThreadPool m_threadPool;       // Manually created thread pool
 
-    // 新增：手动创建线程池实例（替代get_default()）
-    Glib::ThreadPool m_threadPool; // 低版本glibmm适配，手动初始化
-
-    // 信号处理函数
+    // ------------- Signal Handling Functions (Supplement Missing) -------------
     void on_select_src_clicked();
     void on_select_dest_clicked();
     void on_backup_clicked();
     void on_restore_clicked();
-    // 修复：定时器回调返回bool类型
     bool on_timer_timeout();
+    void on_timer_btn_clicked();         // Scheduled backup button click event (New)
+    void on_pwd_visible_toggled();       // Password visibility toggle event (New)
+    void on_src_entry_changed();         // Source input box content change event (New)
+    void on_dest_entry_changed();        // Target input box content change event (New)
+    bool on_window_delete_event();       // Window close event (New)
+
     void start_timer(int interval_min);
+    void stop_timer();                   // Stop scheduled backup (New)
     void on_task_completed();
     void do_backup_task();
-    void do_restore_task(const std::string& backupFile, const std::string& restorePath, const std::string& cryptoAlg, const std::string& password);
+    void do_restore_task(const std::string& backupFile, const std::string& restorePath, const std::string& cryptoAlg, const std::string& packType);
 };

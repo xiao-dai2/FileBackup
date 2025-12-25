@@ -5,13 +5,11 @@
 #include <signal.h>
 #include <filesystem>
 
-// 全局变量：备份核心实例
-BackupCore* g_backupCore = nullptr;
-
+bool isCliMode = false;
 // 信号处理函数（优雅退出）
 void signalHandler(int signum) {
     std::cout << "\n收到停止信号，正在退出程序..." << std::endl;
-    Gtk::Main::quit(); // 退出GTK主循环
+    if(!isCliMode) Gtk::Main::quit(); // 退出GTK主循环
     exit(signum);
 }
 
@@ -41,7 +39,7 @@ int main(int argc, char *argv[]) {
     }
 
     // 3. 判断运行模式（CLI / GTK图形界面）
-    bool isCliMode = false;
+   
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--cli" || std::string(argv[i]) == "-c") {
             isCliMode = true;
@@ -57,7 +55,6 @@ int main(int argc, char *argv[]) {
         std::cout << "  restore --file 备份文件 --dest 还原路径 [--crypto 加密算法] [--password 密码]" << std::endl;
 
         BackupCore core;
-        g_backupCore = &core;
         BackupCore::BackupConfig config;
 
         for (int i = 1; i < argc; i++) {
@@ -122,9 +119,6 @@ int main(int argc, char *argv[]) {
         // GTK图形界面模式
         Gtk::Main kit(argc, argv);
         MainWindow window;
-        // 修复：通过公共接口getBackupCore()获取备份核心实例，而非直接访问私有成员
-        g_backupCore = &window.getBackupCore();
-
         // 启动GTK主循环
         Gtk::Main::run(window);
     }
