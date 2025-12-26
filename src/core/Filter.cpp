@@ -10,9 +10,9 @@ bool FilterRule::match(const fs::path& filePath) const {
     bool typeMatch = false;
     for (const auto& type : includeTypes) {
         if (type == "all") { typeMatch = true; break; }
-        if (type == "file" && fs::is_regular_file(status)) typeMatch = true;
-        if (type == "dir" && fs::is_directory(status)) typeMatch = true;
-        if (type == "symlink" && fs::is_symlink(status)) typeMatch = true;
+        if (type == "-" && fs::is_regular_file(status)) typeMatch = true;
+        if (type == "d" && fs::is_directory(status)) typeMatch = true;
+        if (type == "l" && fs::is_symlink(status)) typeMatch = true;
         // 支持管道、设备文件等（扩展）
     }
     if (!typeMatch) return false;

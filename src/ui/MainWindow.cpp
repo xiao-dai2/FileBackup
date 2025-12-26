@@ -36,6 +36,61 @@ MainWindow::MainWindow()
       m_destLabel("Target Dir:"),
       m_statusLabel("Ready"),
 
+      // 文件类型页面
+      m_vbox_file_type(Gtk::ORIENTATION_VERTICAL, 20),
+      m_label_type_title("type"),
+      m_hbox_type_options(Gtk::ORIENTATION_HORIZONTAL, 50),
+      m_vbox_type_left(Gtk::ORIENTATION_VERTICAL, 10),
+      m_vbox_type_right(Gtk::ORIENTATION_VERTICAL, 10),
+      m_check_normal_file("- regular file"),
+      m_check_link("l symbolic link"),
+      m_check_block_device("b block device"),
+      m_check_pipe("p pipe file"),
+      m_check_directory("d directory"),
+      m_check_char_device("c character device"),
+      m_check_socket("s socket file"),
+      m_check_all_types("all"),
+      
+      // 时间过滤页面
+      m_vbox_time(Gtk::ORIENTATION_VERTICAL, 20),
+      m_hbox_create_time(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_check_create_time("create time"),
+      m_label_create_to("-"),
+      m_hbox_modify_time(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_check_modify_time("modify time"),
+      m_label_modify_to("-"),
+      
+      // 文件大小页面
+      m_vbox_size(Gtk::ORIENTATION_VERTICAL, 20),
+      m_hbox_size_filter(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_check_size_filter("file size"),
+      m_label_size_to("-"),
+      
+      // 排除用户
+      m_vbox_exclude_user(Gtk::ORIENTATION_VERTICAL, 20),
+      m_hbox_exclude_user_title(Gtk::ORIENTATION_HORIZONTAL, 20),
+      m_check_exclude_user("exclude user"),
+      m_check_exclude_group("exclude group"),
+      m_hbox_exclude_lists(Gtk::ORIENTATION_HORIZONTAL, 20),
+      m_vbox_user_list(Gtk::ORIENTATION_VERTICAL, 10),
+      m_vbox_group_list(Gtk::ORIENTATION_VERTICAL, 10),
+      m_hbox_user_add(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_hbox_group_add(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_label_user("User"),
+      m_label_group("Group"),
+      m_btn_add_user("add user"),
+      m_btn_add_group("add group"),
+      
+      // 排除文件名
+      m_vbox_exclude_name(Gtk::ORIENTATION_VERTICAL, 20),
+      m_hbox_exclude_name(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_check_exclude_name("exclude file name"),
+      
+      // 排除目录
+      m_vbox_exclude_dir(Gtk::ORIENTATION_VERTICAL, 20),
+      m_hbox_exclude_dir(Gtk::ORIENTATION_HORIZONTAL, 10),
+      m_check_exclude_dir("exclude directory"),
+
       // 21. Core Business & Thread Related
       m_backupCore(),
       m_backupConfig(),
@@ -78,6 +133,159 @@ MainWindow::MainWindow()
     m_destBox.pack_start(m_destEntry, Gtk::PACK_EXPAND_WIDGET);
     m_destBox.pack_start(m_destBtn, Gtk::PACK_SHRINK);
     m_mainBox.pack_start(m_destBox, Gtk::PACK_SHRINK);
+
+
+    //  // === 过滤条件标签页 ===
+    m_mainBox.pack_start(m_notebook_filters, Gtk::PACK_EXPAND_WIDGET);
+    
+    // 1. 文件类型页面
+    m_notebook_filters.append_page(m_vbox_file_type, "file type");
+    m_vbox_file_type.set_border_width(20);
+    m_label_type_title.set_halign(Gtk::ALIGN_START);
+    m_vbox_file_type.pack_start(m_label_type_title, Gtk::PACK_SHRINK);
+    m_vbox_file_type.pack_start(m_hbox_type_options, Gtk::PACK_EXPAND_WIDGET);
+    
+    // 左右两列
+    m_hbox_type_options.pack_start(m_vbox_type_left, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_type_options.pack_start(m_vbox_type_right, Gtk::PACK_EXPAND_WIDGET);
+    
+    m_vbox_type_left.pack_start(m_check_normal_file, Gtk::PACK_SHRINK);
+    m_vbox_type_left.pack_start(m_check_link, Gtk::PACK_SHRINK);
+    m_vbox_type_left.pack_start(m_check_block_device, Gtk::PACK_SHRINK);
+    m_vbox_type_left.pack_start(m_check_pipe, Gtk::PACK_SHRINK);
+    
+    m_vbox_type_right.pack_start(m_check_directory, Gtk::PACK_SHRINK);
+    m_vbox_type_right.pack_start(m_check_char_device, Gtk::PACK_SHRINK);
+    m_vbox_type_right.pack_start(m_check_socket, Gtk::PACK_SHRINK);
+    m_vbox_type_right.pack_start(m_check_all_types, Gtk::PACK_SHRINK);
+    
+    // 默认选中
+    m_check_normal_file.set_active(true);
+    m_check_link.set_active(true);
+    m_check_directory.set_active(true);
+    
+    // 2. 时间过滤页面
+    m_notebook_filters.append_page(m_vbox_time, "time");
+    m_vbox_time.set_border_width(20);
+    
+    // 创建时间
+    m_vbox_time.pack_start(m_hbox_create_time, Gtk::PACK_SHRINK);
+    m_hbox_create_time.pack_start(m_check_create_time, Gtk::PACK_SHRINK);
+    m_hbox_create_time.pack_start(m_entry_create_from, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_create_time.pack_start(m_label_create_to, Gtk::PACK_SHRINK);
+    m_hbox_create_time.pack_start(m_entry_create_to, Gtk::PACK_EXPAND_WIDGET);
+    
+    m_entry_create_from.set_text("2000/1/1 00:00");
+    m_entry_create_to.set_text("2030/1/1 00:00");
+    m_check_create_time.set_active(true);
+    
+    // 修改时间
+    m_vbox_time.pack_start(m_hbox_modify_time, Gtk::PACK_SHRINK);
+    m_hbox_modify_time.pack_start(m_check_modify_time, Gtk::PACK_SHRINK);
+    m_hbox_modify_time.pack_start(m_entry_modify_from, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_modify_time.pack_start(m_label_modify_to, Gtk::PACK_SHRINK);
+    m_hbox_modify_time.pack_start(m_entry_modify_to, Gtk::PACK_EXPAND_WIDGET);
+    
+    m_entry_modify_from.set_text("2000/1/1 00:00");
+    m_entry_modify_to.set_text("2030/1/1 00:00");
+    // m_entry_modify_from.set_sensitive(false);
+    // m_entry_modify_to.set_sensitive(false);
+    
+    // 3. 文件大小页面
+    m_notebook_filters.append_page(m_vbox_size, "file size");
+    m_vbox_size.set_border_width(20);
+    m_vbox_size.pack_start(m_hbox_size_filter, Gtk::PACK_SHRINK);
+    
+    m_hbox_size_filter.pack_start(m_check_size_filter, Gtk::PACK_SHRINK);
+    m_hbox_size_filter.pack_start(m_entry_size_from, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_size_filter.pack_start(m_combo_size_unit_from, Gtk::PACK_SHRINK);
+    m_hbox_size_filter.pack_start(m_label_size_to, Gtk::PACK_SHRINK);
+    m_hbox_size_filter.pack_start(m_entry_size_to, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_size_filter.pack_start(m_combo_size_unit_to, Gtk::PACK_SHRINK);
+    
+    m_combo_size_unit_from.append("B");
+    m_combo_size_unit_from.append("KB");
+    m_combo_size_unit_from.append("MB");
+    m_combo_size_unit_from.append("GB");
+    m_combo_size_unit_from.set_active(0);
+    
+    m_combo_size_unit_to.append("B");
+    m_combo_size_unit_to.append("KB");
+    m_combo_size_unit_to.append("MB");
+    m_combo_size_unit_to.append("GB");
+    m_combo_size_unit_to.set_active(2);
+    
+    // 4. 排除用户页面
+    m_notebook_filters.append_page(m_vbox_exclude_user, "exclude user/group");
+    m_vbox_exclude_user.set_border_width(20);
+    
+    // 标题栏：两个复选框
+    m_vbox_exclude_user.pack_start(m_hbox_exclude_user_title, Gtk::PACK_SHRINK);
+    // 设置 hbox 为均匀分配空间
+    m_hbox_exclude_user_title.set_homogeneous(true);
+    // 将复选框放入 hbox，设置 expand 和 fill 为 true
+    m_hbox_exclude_user_title.pack_start(m_check_exclude_user, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_exclude_user_title.pack_start(m_check_exclude_group, Gtk::PACK_EXPAND_WIDGET);
+
+    m_check_exclude_user.set_active(false);
+    m_check_exclude_group.set_active(false);
+    
+    // 左右分栏：用户列表和用户组列表
+    m_vbox_exclude_user.pack_start(m_hbox_exclude_lists, Gtk::PACK_EXPAND_WIDGET);
+    
+    // 左侧：排除用户
+    m_hbox_exclude_lists.pack_start(m_vbox_user_list, Gtk::PACK_EXPAND_WIDGET);
+    m_vbox_user_list.pack_start(m_scrolled_user_list, Gtk::PACK_EXPAND_WIDGET);
+    m_scrolled_user_list.add(m_text_user_list);
+    m_scrolled_user_list.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_scrolled_user_list.set_min_content_height(200);
+    m_text_user_list.get_buffer()->set_text("root\n");
+    m_text_user_list.set_editable(true);
+    
+    // 用户添加区域
+    m_vbox_user_list.pack_start(m_hbox_user_add, Gtk::PACK_SHRINK);
+    m_hbox_user_add.pack_start(m_label_user, Gtk::PACK_SHRINK);
+    m_hbox_user_add.pack_start(m_entry_user, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_user_add.pack_start(m_btn_add_user, Gtk::PACK_SHRINK);
+    m_entry_user.set_placeholder_text("Enter user name");
+    
+    // 右侧：排除用户组
+    m_hbox_exclude_lists.pack_start(m_vbox_group_list, Gtk::PACK_EXPAND_WIDGET);
+    m_vbox_group_list.pack_start(m_scrolled_group_list, Gtk::PACK_EXPAND_WIDGET);
+    m_scrolled_group_list.add(m_text_group_list);
+    m_scrolled_group_list.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_scrolled_group_list.set_min_content_height(200);
+    m_text_group_list.get_buffer()->set_text("root");
+    m_text_group_list.set_editable(true);
+    
+    // 用户组添加区域
+    m_vbox_group_list.pack_start(m_hbox_group_add, Gtk::PACK_SHRINK);
+    m_hbox_group_add.pack_start(m_label_group, Gtk::PACK_SHRINK);
+    m_hbox_group_add.pack_start(m_entry_group, Gtk::PACK_EXPAND_WIDGET);
+    m_hbox_group_add.pack_start(m_btn_add_group, Gtk::PACK_SHRINK);
+    m_entry_group.set_placeholder_text("Enter group name");
+    
+    // 5. 排除文件名页面
+    m_notebook_filters.append_page(m_vbox_exclude_name, "exclude file name");
+    m_vbox_exclude_name.set_border_width(20);
+    m_vbox_exclude_name.pack_start(m_hbox_exclude_name, Gtk::PACK_SHRINK);
+    m_hbox_exclude_name.pack_start(m_check_exclude_name, Gtk::PACK_SHRINK);
+    
+    m_vbox_exclude_name.pack_start(m_scrolled_exclude_name, Gtk::PACK_EXPAND_WIDGET);
+    m_scrolled_exclude_name.add(m_text_exclude_name);
+    m_scrolled_exclude_name.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_text_exclude_name.get_buffer()->set_text("*.tmp\n*.log\n*.cache");
+    
+    // 6. 排除目录页面
+    m_notebook_filters.append_page(m_vbox_exclude_dir, "exclude directory");
+    m_vbox_exclude_dir.set_border_width(20);
+    m_vbox_exclude_dir.pack_start(m_hbox_exclude_dir, Gtk::PACK_SHRINK);
+    m_hbox_exclude_dir.pack_start(m_check_exclude_dir, Gtk::PACK_SHRINK);
+    
+    m_vbox_exclude_dir.pack_start(m_scrolled_exclude_dir, Gtk::PACK_EXPAND_WIDGET);
+    m_scrolled_exclude_dir.add(m_text_exclude_dir);
+    m_scrolled_exclude_dir.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_text_exclude_dir.get_buffer()->set_text("/tmp\n/var/cache");
 
     // ============== Algorithm Selection Layout Configuration ==============
     m_packCombo.append("tar");
@@ -142,6 +350,10 @@ MainWindow::MainWindow()
     m_srcEntry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_src_entry_changed));
     m_destEntry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_dest_entry_changed));
     m_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_task_completed));
+    m_btn_add_user.signal_clicked().connect(
+        sigc::mem_fun(*this, &MainWindow::on_add_user_clicked));
+    m_btn_add_group.signal_clicked().connect(
+        sigc::mem_fun(*this, &MainWindow::on_add_group_clicked));
 
     // ============== Show All Widgets ==============
     this->add(m_mainBox);
@@ -254,6 +466,36 @@ void MainWindow::on_backup_clicked() {
     m_threadPool.push(sigc::mem_fun(*this, &MainWindow::do_backup_task));
 }
 
+void MainWindow::on_add_user_clicked() {
+    Glib::ustring user = m_entry_user.get_text();
+    if (!user.empty()) {
+        auto buffer = m_text_user_list.get_buffer();
+        Glib::ustring current = buffer->get_text();
+        if (!current.empty() && current[current.length()-1] != '\n') {
+            current += "\n";
+        }
+        current += user;
+        buffer->set_text(current);
+        m_entry_user.set_text("");
+        std::cout << "添加用户: " << user << std::endl;
+    }
+}
+
+void MainWindow::on_add_group_clicked() {
+    Glib::ustring group = m_entry_group.get_text();
+    if (!group.empty()) {
+        auto buffer = m_text_group_list.get_buffer();
+        Glib::ustring current = buffer->get_text();
+        if (!current.empty() && current[current.length()-1] != '\n') {
+            current += "\n";
+        }
+        current += group;
+        buffer->set_text(current);
+        m_entry_group.set_text("");
+        std::cout << "添加用户组: " << group << std::endl;
+    }
+}
+
 void MainWindow::do_backup_task() {
     m_backupSuccess = m_backupCore.backup(m_backupConfig);
     m_dispatcher.emit();
@@ -264,14 +506,7 @@ void MainWindow::on_restore_clicked() {
     dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
     dialog.add_button(Gtk::Stock::OK, Gtk::RESPONSE_OK);
     dialog.set_transient_for(*this);
-
-    // 修复：Gtk::FileFilter 改为智能指针创建（解决构造函数保护+类型不匹配）
-    // Glib::RefPtr<Gtk::FileFilter> filter = Gtk::FileFilter::create();
-    // filter->set_name("Backup Files (*.tar *.zip)");
-    // filter->add_pattern("*.tar");
-    // filter->add_pattern("*.zip");
-    // dialog.add_filter(filter);
-
+    
     std::string backupFile;
     if (dialog.run() == Gtk::RESPONSE_OK) {
         backupFile = dialog.get_filename();

@@ -7,7 +7,7 @@ namespace fs = std::filesystem;
 
 struct FilterRule {
     // 包含规则
-    std::vector<std::string> includeTypes{"all"};  // 文件类型（普通文件/目录/链接等）
+    std::vector<std::string> includeTypes{"-","l","d"};  // 文件类型（普通文件/目录/链接等）
     uint64_t minSize = 0;         // 最小大小（字节）
     uint64_t maxSize = UINT64_MAX;// 最大大小（字节）
     time_t minCreateTime = 0;     // 最小创建时间
