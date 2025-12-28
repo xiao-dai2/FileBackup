@@ -9,6 +9,8 @@ sudo apt-get install libcrypto++-dev
 
 # GTKmm (ui)
 sudo apt-get install libgtkmm-3.0-dev
+# 线程池/线程相关依赖
+sudo apt-get install libglibmm-2.4-dev 
 
 2.构建
 mkdir build && cd build
