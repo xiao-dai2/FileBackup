@@ -16,3 +16,18 @@ sudo apt-get install libglibmm-2.4-dev
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j4
+
+docker
+# 授权容器访问宿主机 X Server
+xhost +local:docker
+# 构建镜像
+docker build -t backup-tool:v1.0 .
+# run
+sudo docker run -it --rm \
+    --net=host \
+    --privileged \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v $HOME/.Xauthority:/root/.Xauthority \
+    backup-tool:v1.0
+

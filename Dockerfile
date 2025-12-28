@@ -18,8 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     # GTKmm 3.0 核心依赖
     libgtkmm-3.0-dev \
-    # sigc++ 依赖（GTKmm信号槽）
-    libsigc++-2.0-dev \
+    # libtar
+    libtar-dev \
+    # Crypto++（加密解密）
+    libcrypto++-dev \
     # 线程池/线程相关依赖
     libglibmm-2.4-dev \
     # X11显示依赖（容器内运行GUI必需）
@@ -42,11 +44,11 @@ COPY . /app
 
 # 创建编译目录并编译项目
 RUN mkdir -p /app/build && cd /app/build \
-    && cmake .. -DCMAKE_BUILD_TYPE=Release \
-    && make -j$(nproc)
+    && cmake .. -DCMAKE_BUILD_TYPE=Debug \
+    && make -j4
 
-# 创建运行时目录（存放备份数据/配置，可选）
-RUN mkdir -p /app/backup_data /app/icons && chmod 777 /app/backup_data /tmp/runtime-root
+# # 创建运行时目录（存放备份数据/配置，可选）
+# RUN mkdir -p /app/backup_data /app/icons && chmod 777 /app/backup_data /tmp/runtime-root
 
 # 暴露端口（GUI程序无需暴露端口，仅为标识）
 EXPOSE 8080
