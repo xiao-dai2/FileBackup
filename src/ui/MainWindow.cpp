@@ -1,7 +1,7 @@
 #include "MainWindow.h"
-#include <iostream>
 #include <filesystem>
 #include <sstream>
+#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -367,7 +367,7 @@ MainWindow::~MainWindow() {
 
 bool MainWindow::on_window_delete_event(GdkEventAny* event) {
     (void) event;
-    std::cout << "Program is exiting gracefully..." << std::endl;
+    std::cout <<"Program is exiting gracefully..."<< std::endl;
     stop_timer();
     Gtk::Main::quit();
     return true; // 返回true表示已处理事件，阻止默认关闭行为（此处我们主动调用quit，不影响）
@@ -477,7 +477,7 @@ void MainWindow::on_add_user_clicked() {
         current += user;
         buffer->set_text(current);
         m_entry_user.set_text("");
-        std::cout << "添加用户: " << user << std::endl;
+        std::cout <<"Adding user: " << user << std::endl;
     }
 }
 
@@ -492,7 +492,7 @@ void MainWindow::on_add_group_clicked() {
         current += group;
         buffer->set_text(current);
         m_entry_group.set_text("");
-        std::cout << "添加用户组: " << group << std::endl;
+        std::cout <<"Adding group: " << group << std::endl;
     }
 }
 

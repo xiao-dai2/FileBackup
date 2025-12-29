@@ -4,28 +4,14 @@
 #include "core/BackupCore.h"
 #include <signal.h>
 #include <filesystem>
+#include "spdlog/spdlog.h"
 
 bool isCliMode = false;
 // 信号处理函数（优雅退出）
 void signalHandler(int signum) {
-    std::cout << "\n收到停止信号，正在退出程序..." << std::endl;
+    spdlog::info("收到停止信号，正在退出程序...");
     if(!isCliMode) Gtk::Main::quit(); // 退出GTK主循环
     exit(signum);
-}
-
-// 初始化日志目录
-bool initLogDir(const std::string& logDir = "./backup_log") {
-    namespace fs = std::filesystem;
-    try {
-        if (!fs::exists(logDir)) {
-            fs::create_directory(logDir);
-            std::cout << "日志目录创建成功：" << logDir << std::endl;
-        }
-        return true;
-    } catch (const fs::filesystem_error& e) {
-        std::cerr << "日志目录初始化失败：" << e.what() << std::endl;
-        return false;
-    }
 }
 
 int main(int argc, char *argv[]) {
@@ -33,13 +19,7 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    // 2. 初始化日志目录
-    if (!initLogDir()) {
-        return 1;
-    }
-
-    // 3. 判断运行模式（CLI / GTK图形界面）
-   
+    // 2. 判断运行模式（CLI / GTK图形界面）
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--cli" || std::string(argv[i]) == "-c") {
             isCliMode = true;
@@ -72,7 +52,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (config.srcPath.empty() || config.destPath.empty()) {
-                    std::cerr << "错误：源路径和目标路径不能为空！" << std::endl;
+                    spdlog::error("错误：源路径和目标路径不能为空！");
                     return 1;
                 }
 
@@ -81,11 +61,11 @@ int main(int argc, char *argv[]) {
                 if (config.compressAlg.empty()) config.compressAlg = "LZ77";
                 if (config.cryptoAlg.empty()) config.cryptoAlg = "AES";
 
-                std::cout << "开始备份..." << std::endl;
+                spdlog::info("开始备份...");
                 if (core.backup(config)) {
-                    std::cout << "备份成功！" << std::endl;
+                    spdlog::info("备份成功！");
                 } else {
-                    std::cerr << "备份失败！" << std::endl;
+                    spdlog::error("备份失败！");
                     return 1;
                 }
                 break;
@@ -101,15 +81,15 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (backupFile.empty() || restorePath.empty()) {
-                    std::cerr << "错误：备份文件和还原路径不能为空！" << std::endl;
+                    spdlog::error("错误：备份文件和还原路径不能为空！");
                     return 1;
                 }
 
-                std::cout << "开始还原..." << std::endl;
+                spdlog::info("开始还原...");
                 if (core.restore(backupFile, restorePath, cryptoAlg, password)) {
-                    std::cout << "还原成功！" << std::endl;
+                    spdlog::info("还原成功！");
                 } else {
-                    std::cerr << "还原失败！" << std::endl;
+                    spdlog::error("还原失败！");
                     return 1;
                 }
                 break;

@@ -57,6 +57,7 @@ file(GLOB_RECURSE PROJECT_SOURCES
 # 收集所有头文件（用于IDE索引，可选）
 file(GLOB_RECURSE PROJECT_HEADERS 
     "${PROJECT_SOURCE_DIR}/src/*.h"
+    "${PROJECT_SOURCE_DIR}/external/*.h"
 )
 
 # 生成可执行文件
@@ -73,6 +74,7 @@ target_include_directories(${PROJECT_NAME}
         ${PROJECT_SOURCE_DIR}/src/core     # 核心模块头文件
         ${PROJECT_SOURCE_DIR}/src/ui       # UI模块头文件
         ${GTKMM_INCLUDE_DIRS}              # GTKmm头文件目录
+        ${PROJECT_SOURCE_DIR}/external    # 第三方库头文件目录
 )
 
 # 链接依赖库
@@ -97,21 +99,10 @@ target_compile_options(${PROJECT_NAME}
         ${GTKMM_CFLAGS_OTHER}
 )
 
-# -------------------------- 安装配置（可选） --------------------------
-# 将可执行文件安装到/usr/local/bin目录（sudo make install后可全局调用）
-install(TARGETS ${PROJECT_NAME}
-    RUNTIME DESTINATION /usr/local/bin
-)
-
-# 安装文档（可选）
-install(FILES README.md
-    DESTINATION /usr/local/share/doc/${PROJECT_NAME}
-)
-
-# -------------------------- 辅助配置 --------------------------
-# 让IDE识别项目结构（可选，针对CLion、VS Code等）
-source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Source Files" FILES ${PROJECT_SOURCES})
-source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Header Files" FILES ${PROJECT_HEADERS})
+# # -------------------------- 辅助配置 --------------------------
+# # 让IDE识别项目结构（可选，针对CLion、VS Code等）
+# source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Source Files" FILES ${PROJECT_SOURCES})
+# source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Header Files" FILES ${PROJECT_HEADERS})
 
 # 打印配置信息（方便调试）
 message(STATUS "项目名称：${PROJECT_NAME}")

@@ -8,7 +8,7 @@
 #include <crypto++/filters.h>
 #include <crypto++/hex.h>
 #include <crypto++/files.h> // 必须包含，提供FileSource/FileSink支持
-
+#include "spdlog/spdlog.h"
 using namespace std;
 using namespace CryptoPP;
 
@@ -36,7 +36,7 @@ bool aesEncrypt(const string& srcFile, const string& destFile, const string& pas
 
         return true;
     } catch (const Exception& e) {
-        cerr << "AES加密异常：" << e.what() << endl;
+        spdlog::error("AES加密异常：{}", e.what());
         return false;
     }
 }
@@ -63,7 +63,7 @@ bool aesDecrypt(const string& encryptFile, const string& destFile, const string&
 
         return true;
     } catch (const Exception& e) {
-        cerr << "AES解密异常：" << e.what() << endl;
+        spdlog::error("AES解密异常：{}", e.what());
         return false;
     }
 }
@@ -91,7 +91,7 @@ bool desEncrypt(const string& srcFile, const string& destFile, const string& pas
 
         return true;
     } catch (const Exception& e) {
-        cerr << "DES加密异常：" << e.what() << endl;
+        spdlog::error("DES加密异常：{}", e.what());
         return false;
     }
 }
@@ -118,7 +118,7 @@ bool desDecrypt(const string& encryptFile, const string& destFile, const string&
 
         return true;
     } catch (const Exception& e) {
-        cerr << "DES解密异常：" << e.what() << endl;
+        spdlog::error("DES解密异常：{}", e.what());
         return false;
     }
 }
@@ -130,7 +130,7 @@ bool Crypto::encrypt(const string& srcFile, const string& destFile, const string
     } else if (alg == "DES") {
         return desEncrypt(srcFile, destFile, password);
     } else {
-        cerr << "不支持的加密算法：" << alg << endl;
+        spdlog::error("不支持的加密算法：{}", alg);
         return false;
     }
 }
@@ -142,7 +142,7 @@ bool Crypto::decrypt(const string& encryptFile, const string& destFile, const st
     } else if (alg == "DES") {
         return desDecrypt(encryptFile, destFile, password);
     } else {
-        cerr << "不支持的解密算法：" << alg << endl;
+        spdlog::error("不支持的解密算法：{}", alg);
         return false;
     }
 }

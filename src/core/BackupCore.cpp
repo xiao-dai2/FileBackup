@@ -1,6 +1,7 @@
 #include "BackupCore.h"
 #include <fstream>
 #include <iostream>
+#include "spdlog/spdlog.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -24,31 +25,30 @@ bool BackupCore::backup(const BackupConfig& config) {
         vector<fs::path> fileList;
         traverseDir(config.srcPath, fileList, config.filterRule);
         if (fileList.empty()) {
-            cout << "无符合条件的文件待备份！" << endl;
+            spdlog::warn("没有符合筛选规则的文件，备份终止！");
             return false;
         }
         for_each(fileList.begin(), fileList.end(), [](const fs::path& p) {
-            cout << "待备份文件：" << p << endl;
+           spdlog::info("Selected file: {}", p.string());
         });
         // 2. 打包（tar/MyPack）
         string packFile = config.destPath + "/backup.pack";
         if (!PackUnpack::pack(fileList, packFile, config.packAlg)) {
-            cout << "打包失败！" << endl;
+            spdlog::error("打包失败！");
             return false;
         }
 
         // 3. 压缩（LZ77/Haff）
         string compressFile = packFile + "." + config.compressAlg;
         if (!Compress::compress(packFile, compressFile, config.compressAlg)) {
-            cout << "压缩失败！" << endl;
+            spdlog::error("压缩失败！");
             return false;
-        }
-        cout << "压缩成功：" << compressFile << endl;
-
+        } 
+        
         // 4. 加密（AES/DES）
         string encryptFile = compressFile + "." + config.cryptoAlg;
         if (!Crypto::encrypt(compressFile, encryptFile, config.cryptoAlg, config.password)) {
-            cout << "加密失败！" << endl;
+            spdlog::error("加密失败！");
             return false;
         }
 
@@ -56,10 +56,9 @@ bool BackupCore::backup(const BackupConfig& config) {
         // fs::remove(packFile);
         // fs::remove(compressFile);
 
-        cout << "备份成功！备份文件：" << encryptFile << endl;
         return true;
     } catch (const fs::filesystem_error& e) {
-        cout << "备份异常：" << e.what() << endl;
+        spdlog::error("备份异常：{}", e.what());
         return false;
     }
 }
@@ -71,7 +70,7 @@ bool BackupCore::restore(const string& backupFile, const string& restorePath,
         // 1. 解密
         string decryptFile = backupFile + ".decrypt";
         if (!Crypto::decrypt(backupFile, decryptFile, cryptoAlg, password)) {
-            cout << "解密失败（密码错误或算法不匹配）！" << endl;
+            spdlog::error("解密失败（密码错误或算法不匹配）！");
             return false;
         }
 
@@ -83,26 +82,25 @@ bool BackupCore::restore(const string& backupFile, const string& restorePath,
         size_t secondLastDot = backupFile.rfind('.', lastDot - 1);
         string compressAlg = backupFile.substr(secondLastDot + 1, lastDot - secondLastDot - 1);
 
-        cout << "Detected compress algorithm: " << compressAlg << endl;
+        spdlog::info("Detected compress algorithm: {}", compressAlg);
         if (!Compress::decompress(decryptFile, decompressFile, compressAlg)) {
-            cout << "解压失败！" << endl;
+            spdlog::error("解压失败！");
             return false;
         }
         // 3. 解包
         string packAlg = "tar"; // 默认使用tar打包算法
         if (!PackUnpack::unpack(decompressFile, restorePath, packAlg)) {
-            cout << "解包失败！" << endl;
+            spdlog::error("解包失败！");
             return false;
         }
 
         // 删除中间文件
         // fs::remove(decryptFile);
         // fs::remove(decompressFile);
-
-        cout << "还原成功！还原路径：" << restorePath << endl;
+        spdlog::info("还原路径：{}", restorePath);
         return true;
     } catch (const fs::filesystem_error& e) {
-        cout << "还原异常：" << e.what() << endl;
+        spdlog::error("还原异常：{}", e.what());
         return false;
     }
 }
