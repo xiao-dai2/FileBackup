@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <sstream>
 #include <iostream>
+#include <time.h>
 
 namespace fs = std::filesystem;
 
@@ -424,6 +425,168 @@ void MainWindow::on_pwd_visible_toggled() {
     m_pwdEntry.set_visibility(m_pwdVisibleBtn.get_active());
 }
 
+FilterRule MainWindow::getFilterRule() const {
+    FilterRule rule;
+    
+    // === 文件类型过滤 ===
+    rule.includeTypes.clear(); // 清空默认值
+    
+    if (m_check_normal_file.get_active()) rule.includeTypes.push_back("-");
+    if (m_check_directory.get_active()) rule.includeTypes.push_back("d");
+    if (m_check_link.get_active()) rule.includeTypes.push_back("l");
+    if (m_check_block_device.get_active()) rule.includeTypes.push_back("b");
+    if (m_check_char_device.get_active()) rule.includeTypes.push_back("c");
+    if (m_check_pipe.get_active()) rule.includeTypes.push_back("p");
+    if (m_check_socket.get_active()) rule.includeTypes.push_back("s");
+    
+    // 如果选择"全选"或者没有选择任何类型，则包含所有类型
+    if (m_check_all_types.get_active() || rule.includeTypes.empty()) {
+        rule.includeTypes = {"-", "d", "l", "b", "c", "p", "s"};
+    }
+    
+    // === 时间过滤 ===
+    if (m_check_create_time.get_active()) {
+        std::string fromStr = m_entry_create_from.get_text();
+        std::string toStr = m_entry_create_to.get_text();
+        
+        try {
+            if (!fromStr.empty()) {
+                struct tm tm = {};
+                strptime(fromStr.c_str(), "%Y-%m-%d", &tm);
+                rule.minCreateTime = mktime(&tm);
+            }
+            if (!toStr.empty()) {
+                struct tm tm = {};
+                strptime(toStr.c_str(), "%Y-%m-%d", &tm);
+                rule.maxCreateTime = mktime(&tm);
+            }
+        } catch (...) {
+            std::cerr<<"时间格式错误，使用默认值"<<std::endl;
+            // 时间格式错误，使用默认值
+        }
+    }
+    
+    if (m_check_modify_time.get_active()) {
+        std::string fromStr = m_entry_modify_from.get_text();
+        std::string toStr = m_entry_modify_to.get_text();
+        
+        try {
+            if (!fromStr.empty()) {
+                struct tm tm = {};
+                strptime(fromStr.c_str(), "%Y-%m-%d", &tm);
+                rule.minModifyTime = mktime(&tm);
+            }
+            if (!toStr.empty()) {
+                struct tm tm = {};
+                strptime(toStr.c_str(), "%Y-%m-%d", &tm);
+                rule.maxModifyTime = mktime(&tm);
+            }
+        } catch (...) {
+            std::cerr<<"时间格式错误，使用默认值"<<std::endl;
+            // 时间格式错误，使用默认值
+        }
+    }
+    
+    // === 文件大小过滤 ===
+    if (m_check_size_filter.get_active()) {
+        std::string fromStr = m_entry_size_from.get_text();
+        std::string toStr = m_entry_size_to.get_text();
+        std::string unitFrom = m_combo_size_unit_from.get_active_text();
+        std::string unitTo = m_combo_size_unit_to.get_active_text();
+        
+        try {
+            if (!fromStr.empty()) {
+                uint64_t size = std::stoull(fromStr);
+                // 转换为字节
+                if (unitFrom == "KB") size *= 1024;
+                else if (unitFrom == "MB") size *= 1024 * 1024;
+                else if (unitFrom == "GB") size *= 1024 * 1024 * 1024;
+                rule.minSize = size;
+            }
+            
+            if (!toStr.empty()) {
+                uint64_t size = std::stoull(toStr);
+                // 转换为字节
+                if (unitTo == "KB") size *= 1024;
+                else if (unitTo == "MB") size *= 1024 * 1024;
+                else if (unitTo == "GB") size *= 1024 * 1024 * 1024;
+                rule.maxSize = size;
+            }
+        } catch (...) {
+            // 大小格式错误，使用默认值
+        }
+    }
+    
+    // === 排除用户/组 ===
+    if (m_check_exclude_user.get_active()) {
+        Glib::RefPtr<const Gtk::TextBuffer> buffer = m_text_user_list.get_buffer();
+        std::string text = buffer->get_text();
+        
+        std::istringstream iss(text);
+        std::string user;
+        while (std::getline(iss, user)) {
+            // 去除首尾空白字符
+            user.erase(0, user.find_first_not_of(" \t\n\r"));
+            user.erase(user.find_last_not_of(" \t\n\r") + 1);
+            if (!user.empty()) {
+                rule.excludeUsers.push_back(user);
+            }
+        }
+    }
+    
+    if (m_check_exclude_group.get_active()) {
+        Glib::RefPtr<const Gtk::TextBuffer> buffer = m_text_group_list.get_buffer();
+        std::string text = buffer->get_text();
+        
+        std::istringstream iss(text);
+        std::string group;
+        while (std::getline(iss, group)) {
+            // 去除首尾空白字符
+            group.erase(0, group.find_first_not_of(" \t\n\r"));
+            group.erase(group.find_last_not_of(" \t\n\r") + 1);
+            if (!group.empty()) {
+                rule.excludeGroups.push_back(group);
+            }
+        }
+    }
+    
+    // === 排除文件名 ===
+    if (m_check_exclude_name.get_active()) {
+        Glib::RefPtr<const Gtk::TextBuffer> buffer = m_text_exclude_name.get_buffer();
+        std::string text = buffer->get_text();
+        
+        std::istringstream iss(text);
+        std::string pattern;
+        while (std::getline(iss, pattern)) {
+            // 去除首尾空白字符
+            pattern.erase(0, pattern.find_first_not_of(" \t\n\r"));
+            pattern.erase(pattern.find_last_not_of(" \t\n\r") + 1);
+            if (!pattern.empty()) {
+                rule.excludeNames.push_back(pattern);
+            }
+        }
+    }
+    
+    // === 排除目录 ===
+    if (m_check_exclude_dir.get_active()) {
+        Glib::RefPtr<const Gtk::TextBuffer> buffer = m_text_exclude_dir.get_buffer();
+        std::string text = buffer->get_text();
+        
+        std::istringstream iss(text);
+        std::string dir;
+        while (std::getline(iss, dir)) {
+            // 去除首尾空白字符
+            dir.erase(0, dir.find_first_not_of(" \t\n\r"));
+            dir.erase(dir.find_last_not_of(" \t\n\r") + 1);
+            if (!dir.empty()) {
+                rule.excludePaths.push_back(dir);
+            }
+        }
+    }
+    
+    return rule;
+}
+
 void MainWindow::on_backup_clicked() {
     std::string srcPath = std::string(m_srcEntry.get_text());
     std::string destPath = std::string(m_destEntry.get_text());
@@ -454,10 +617,8 @@ void MainWindow::on_backup_clicked() {
     m_backupConfig.compressAlg = std::string(m_compressCombo.get_active_text());
     m_backupConfig.cryptoAlg = std::string(m_cryptoCombo.get_active_text());
     m_backupConfig.password = std::string(m_pwdEntry.get_text());
-    m_backupConfig.filterRule.includeTypes = {"all"};
-    m_backupConfig.filterRule.minSize = 0;
-    m_backupConfig.filterRule.maxSize = UINT64_MAX;
-
+    m_backupConfig.filterRule = getFilterRule();
+ 
     m_currentTask = "backup";
     m_backupBtn.set_sensitive(false);
     m_restoreBtn.set_sensitive(false);

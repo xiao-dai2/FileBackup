@@ -5,6 +5,7 @@
 #include <glibmm/dispatcher.h>
 #include <glibmm/threadpool.h>
 #include "core/BackupCore.h"
+#include "core/Filter.h"
 
 class MainWindow : public Gtk::Window {
 public:
@@ -158,6 +159,7 @@ private:
     void on_add_user_clicked();
     void on_add_group_clicked();
     bool on_window_delete_event(GdkEventAny* event); 
+    FilterRule getFilterRule() const; 
 
     void start_timer(int interval_min);
     void stop_timer();
