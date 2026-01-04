@@ -176,8 +176,8 @@ MainWindow::MainWindow()
     m_hbox_create_time.pack_start(m_label_create_to, Gtk::PACK_SHRINK);
     m_hbox_create_time.pack_start(m_entry_create_to, Gtk::PACK_EXPAND_WIDGET);
     
-    m_entry_create_from.set_text("2000/1/1 00:00");
-    m_entry_create_to.set_text("2030/1/1 00:00");
+    m_entry_create_from.set_text("2000-1-1");
+    m_entry_create_to.set_text("2030-1-1");
     m_check_create_time.set_active(true);
     
     // 修改时间
@@ -187,8 +187,8 @@ MainWindow::MainWindow()
     m_hbox_modify_time.pack_start(m_label_modify_to, Gtk::PACK_SHRINK);
     m_hbox_modify_time.pack_start(m_entry_modify_to, Gtk::PACK_EXPAND_WIDGET);
     
-    m_entry_modify_from.set_text("2000/1/1 00:00");
-    m_entry_modify_to.set_text("2030/1/1 00:00");
+    m_entry_modify_from.set_text("2000-1-1");
+    m_entry_modify_to.set_text("2030-1-1");
     // m_entry_modify_from.set_sensitive(false);
     // m_entry_modify_to.set_sensitive(false);
     

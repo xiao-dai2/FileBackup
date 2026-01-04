@@ -3,34 +3,67 @@
 #include <pwd.h>
 #include <grp.h>
 
-bool FilterRule::match(const fs::path& filePath) const {
+bool FilterRule::match(const fs::path &filePath) const
+{
     fs::file_status status = fs::status(filePath);
 
     // 1. 匹配文件类型
     bool typeMatch = false;
-    for (const auto& type : includeTypes) {
-        if (type == "all") { typeMatch = true; break; }
-        if (type == "-" && fs::is_regular_file(status)) typeMatch = true;
-        if (type == "d" && fs::is_directory(status)) typeMatch = true;
-        if (type == "l" && fs::is_symlink(status)) typeMatch = true;
+    for (const auto &type : includeTypes)
+    {
+        if (type == "all")
+        {
+            typeMatch = true;
+            break;
+        }
+        if (type == "-" && fs::is_regular_file(status))
+            typeMatch = true;
+        if (type == "d" && fs::is_directory(status))
+            typeMatch = true;
+        if (type == "l" && fs::is_symlink(status))
+            typeMatch = true;
         // 支持管道、设备文件等（扩展）
     }
-    if (!typeMatch) return false;
+    if (!typeMatch)
+        return false;
 
     // 2. 匹配文件大小 (仅普通文件)
-    if (fs::is_regular_file(status)){ 
+    if (fs::is_regular_file(status))
+    {
         uint64_t fileSize = fs::file_size(filePath);
-        if (fileSize < minSize || fileSize > maxSize) return false;
+        if (fileSize < minSize || fileSize > maxSize)
+            return false;
     }
-    // // 3. 匹配时间（创建/修改）
-    // auto createTime = fs::last_write_time(filePath); // 简化：用写入时间代替创建时间
-    // auto modifyTime = fs::last_write_time(filePath);
-    // if (createTime. < minCreateTime || createTime > maxCreateTime) return false;
-    // if (modifyTime < minModifyTime || modifyTime > maxModifyTime) return false;
+
+    // 3. 匹配时间（创建/修改）
+    // 获取文件时间
+    auto createTime = fs::last_write_time(filePath); // 用写入时间代替创建时间
+    auto modifyTime = fs::last_write_time(filePath); // 最后修改时间
+
+    // 将 file_time_type 转换为 time_t
+    auto toTimeT = [](const fs::file_time_type &ftime) -> time_t
+    {
+        // 方法1: 使用 system_clock 转换
+        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+            ftime - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
+        return std::chrono::system_clock::to_time_t(sctp);
+    };
+
+    time_t createTimeT = toTimeT(createTime);
+    time_t modifyTimeT = toTimeT(modifyTime);
+
+    // 检查时间范围
+    if (createTimeT < minCreateTime || createTimeT > maxCreateTime)
+        return false;
+
+    if (modifyTimeT < minModifyTime || modifyTimeT > maxModifyTime)
+        return false;
 
     // 4. 排除规则：路径
-    for (const auto& path : excludePaths) {
-        if (filePath.string().find(path) != std::string::npos) return false;
+    for (const auto &path : excludePaths)
+    {
+        if (filePath.string().find(path) != std::string::npos)
+            return false;
     }
 
     // 5. 排除规则：用户/用户组（Linux仅支持）
@@ -39,18 +72,24 @@ bool FilterRule::match(const fs::path& filePath) const {
     stat(filePath.c_str(), &st);
     std::string user = getpwuid(st.st_uid)->pw_name;
     std::string group = getgrgid(st.st_gid)->gr_name;
-    for (const auto& u : excludeUsers) {
-        if (user == u) return false;
+    for (const auto &u : excludeUsers)
+    {
+        if (user == u)
+            return false;
     }
-    for (const auto& g : excludeGroups) {
-        if (group == g) return false;
+    for (const auto &g : excludeGroups)
+    {
+        if (group == g)
+            return false;
     }
 #endif
 
     // 6. 排除规则：文件名（正则）
-    for (const auto& name : excludeNames) {
+    for (const auto &name : excludeNames)
+    {
         std::regex reg(name);
-        if (regex_match(filePath.filename().string(), reg)) return false;
+        if (regex_match(filePath.filename().string(), reg))
+            return false;
     }
 
     return true;
