@@ -618,7 +618,7 @@ void MainWindow::on_backup_clicked() {
     m_backupConfig.cryptoAlg = std::string(m_cryptoCombo.get_active_text());
     m_backupConfig.password = std::string(m_pwdEntry.get_text());
     m_backupConfig.filterRule = getFilterRule();
- 
+    
     m_currentTask = "backup";
     m_backupBtn.set_sensitive(false);
     m_restoreBtn.set_sensitive(false);
